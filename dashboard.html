@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2025년 외래 이용 대시보드</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#f4f6f9; --card:#fff; --line:#e3e7ed; --text:#1f2937; --muted:#6b7280; --blue:#1d5fbf; --teal:#0f766e; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif; line-height:1.5; }
+  .wrap { max-width:1040px; margin:0 auto; padding:24px 16px 40px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .desc { margin:0 0 20px; color:var(--muted); font-size:14px; }
+  .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 20px; }
+  .kpi .label { font-size:13px; color:var(--muted); }
+  .kpi .value { font-size:30px; font-weight:700; margin-top:2px; }
+  .kpi .unit { font-size:14px; font-weight:400; color:var(--muted); margin-left:2px; }
+  .charts { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+  .card h2 { font-size:15px; margin:0 0 12px; }
+  .box { position:relative; height:340px; }
+  .insight { border-left:4px solid var(--blue); font-size:15px; }
+  .insight b { color:var(--blue); }
+  .foot { margin-top:12px; font-size:12px; color:var(--muted); }
+  @media (max-width:760px) {
+    .kpis { grid-template-columns:1fr; }
+    .charts { grid-template-columns:1fr; }
+    .kpi .value { font-size:26px; }
+    .box { height:320px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>2025년 외래 이용 현황 대시보드</h1>
+  <p class="desc">2025년 외래 이용량은 언제 집중되고, 어떤 질환이 이용을 주도하는가?</p>
+
+  <div class="kpis">
+    <div class="card kpi"><div class="label">외래 명세서 총수</div><div class="value" id="k1"></div></div>
+    <div class="card kpi"><div class="label">외래 이용 고유 환자 수</div><div class="value" id="k2"></div></div>
+    <div class="card kpi"><div class="label">환자 1명당 평균 외래 명세서</div><div class="value" id="k3"></div></div>
+  </div>
+
+  <div class="charts">
+    <div class="card"><h2>2025년 월별 외래 명세서 수 추이</h2><div class="box"><canvas id="c1"></canvas></div></div>
+    <div class="card"><h2>2025년 외래 주상병 TOP 5</h2><div class="box"><canvas id="c2"></canvas></div></div>
+  </div>
+
+  <div class="card insight"><b>인사이트</b> · <span id="ins"></span></div>
+  <p class="foot">데이터: kr_claims.claim (외래 fom_tp_cd='031', recu_fr_dd 2025-01-01 ~ 2025-12-31), 상병명: sick_master. 건수 = 명세서 수.</p>
+</div>
+<script>
+const total = 19085, patients = 2770;
+const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+const monthly = [1708,1609,1795,1622,1516,1396,1450,1389,1364,1577,1746,1913];
+const top5 = [
+  { code:'J209', name:'상세불명의 급성 기관지염', n:2724 },
+  { code:'I109', name:'기타 및 상세불명의 원발성 고혈압', n:2176 },
+  { code:'E119', name:'합병증을 동반하지 않은 2형 당뇨병', n:744 },
+  { code:'M545', name:'요통', n:667 },
+  { code:'M170', name:'양쪽 원발성 무릎관절증', n:565 }
+];
+const fmt = n => n.toLocaleString('ko-KR');
+document.getElementById('k1').innerHTML = fmt(total) + '<span class="unit">건</span>';
+document.getElementById('k2').innerHTML = fmt(patients) + '<span class="unit">명</span>';
+document.getElementById('k3').innerHTML = (total/patients).toFixed(2) + '<span class="unit">건</span>';
+document.getElementById('ins').textContent =
+  '외래 명세서는 12월(1,913건)에 가장 많고 9월(1,364건)에 가장 적으며, 급성 기관지염(2,724건)과 원발성 고혈압(2,176건) 두 상병이 전체의 25.7%를 차지했습니다.';
+
+Chart.defaults.font.family = '-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
+Chart.defaults.animation = false;
+
+new Chart(document.getElementById('c1'), {
+  type:'line',
+  data:{ labels:months, datasets:[{ data:monthly, borderColor:'#1d5fbf', backgroundColor:'rgba(29,95,191,.08)', fill:true, tension:.25, borderWidth:2.5, pointRadius:3.5, pointHoverRadius:6 }] },
+  options:{ responsive:true, maintainAspectRatio:false,
+    interaction:{ mode:'index', intersect:false },
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>'명세서 ' + fmt(c.parsed.y) + '건' } } },
+    scales:{ x:{ grid:{display:false}, ticks:{ autoSkip:false, maxRotation:0, font:{size:11} } }, y:{ suggestedMin:1000, title:{display:true,text:'명세서 수(건)'}, ticks:{ callback:v=>fmt(v) } } } }
+});
+
+const wrap = (s, w) => { const out=[]; let cur=''; for (const ch of s) { cur+=ch; if (cur.length>=w && ch===' ') { out.push(cur.trim()); cur=''; } } if (cur.trim()) out.push(cur.trim()); return out; };
+new Chart(document.getElementById('c2'), {
+  type:'bar',
+  data:{ labels:top5.map(t=>[t.code, ...wrap(t.name, 9)]), datasets:[{ data:top5.map(t=>t.n), backgroundColor:'#0f766e', borderRadius:3, barThickness:22 }] },
+  options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    layout:{ padding:{ right:44 } },
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ title:i=>top5[i[0].dataIndex].code + ' ' + top5[i[0].dataIndex].name, label:c=>'명세서 ' + fmt(c.parsed.x) + '건' } } },
+    scales:{ x:{ title:{display:true,text:'명세서 수(건)'}, ticks:{ callback:v=>fmt(v) } }, y:{ grid:{display:false}, ticks:{ font:{size:12} } } } },
+  plugins:[{ id:'vals', afterDatasetsDraw(ch){ const {ctx}=ch; ctx.save(); ctx.fillStyle='#1f2937'; ctx.font='12px sans-serif'; ctx.textBaseline='middle';
+    ch.getDatasetMeta(0).data.forEach((b,i)=>ctx.fillText(fmt(top5[i].n), b.x+6, b.y)); ctx.restore(); } }]
+});
+</script>
+</body>
+</html>
